@@ -1,0 +1,5 @@
+patient_id,timestamp,anomaly,value
+P001,2024-01-15 14:00:00,High HR,125
+P002,2024-01-16 15:00:00,High HR | Low Oxygen | High BP,155
+P003,2024-01-17 10:00:00,Low Oxygen,91
+P005,2024-01-19 09:00:00,Low Oxygen | High BP,165

@@ -1,0 +1,7 @@
+[
+  {"patient_id": "P001", "test_date": "2024-01-15", "glucose": 105, "hemoglobin": 13.5, "creatinine": 0.9},
+  {"patient_id": "P002", "test_date": "2024-01-16", "glucose": 180, "hemoglobin": 12.8, "creatinine": 1.2},
+  {"patient_id": "P003", "test_date": "2024-01-17", "glucose": 110, "hemoglobin": 11.9, "creatinine": 1.5},
+  {"patient_id": "P004", "test_date": "2024-01-18", "glucose": 95, "hemoglobin": 13.2, "creatinine": 0.8},
+  {"patient_id": "P005", "test_date": "2024-01-19", "glucose": 125, "hemoglobin": 12.1, "creatinine": 1.8}
+]
