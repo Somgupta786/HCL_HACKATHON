@@ -1,0 +1,58 @@
+2026-02-23 12:51:03,694 - INFO - ======================================================================
+2026-02-23 12:51:03,694 - INFO - HOSPITAL DATA PIPELINE EXECUTION STARTED
+2026-02-23 12:51:03,695 - INFO - ======================================================================
+2026-02-23 12:51:03,695 - INFO - STEP 1 & 2: Reading input files and storing in bronze folder...
+2026-02-23 12:51:03,735 - INFO - STEP 3 & 4: Cleaning data...
+2026-02-23 12:51:03,763 - INFO - STEP 5 & 6: Creating patient master table...
+2026-02-23 12:51:03,775 - INFO - STEP 7: Detecting anomalies...
+2026-02-23 12:51:03,781 - INFO - Feature 1: Calculating risk severity scores...
+2026-02-23 12:51:03,787 - INFO - Feature 2: Simulating real-time vitals processing...
+2026-02-23 12:51:04,798 - INFO - [STREAM] P001 @ 2024-01-15 14:00:00: High HR
+2026-02-23 12:51:05,801 - INFO - [STREAM] P002 @ 2024-01-16 15:00:00: High HR, Low Oxygen, High BP
+2026-02-23 12:51:06,303 - INFO - [STREAM] P003 @ 2024-01-17 10:00:00: Low Oxygen
+2026-02-23 12:51:07,305 - INFO - [STREAM] P005 @ 2024-01-19 09:00:00: Low Oxygen, High BP
+2026-02-23 12:51:07,307 - INFO - STEP 8: Creating visualizations...
+2026-02-23 12:51:10,284 - INFO - Creating severity distribution chart...
+2026-02-23 12:51:10,721 - INFO - ======================================================================
+2026-02-23 12:51:10,722 - INFO - PIPELINE EXECUTION COMPLETED SUCCESSFULLY
+2026-02-23 12:51:10,722 - INFO - ======================================================================
+2026-02-23 12:51:10,722 - INFO - Bronze Layer: 3 files
+2026-02-23 12:51:10,722 - INFO - Silver Layer: 4 files
+2026-02-23 12:51:10,723 - INFO - Gold Layer: 1 files
+2026-02-23 12:51:10,723 - INFO - Visualizations: 4 files
+2026-02-23 12:53:19,200 - INFO - ======================================================================
+2026-02-23 12:53:19,200 - INFO - HOSPITAL DATA PIPELINE EXECUTION STARTED
+2026-02-23 12:53:19,201 - INFO - ======================================================================
+2026-02-23 12:53:19,201 - INFO - STEP 1 & 2: Reading input files and storing in bronze folder...
+2026-02-23 12:53:19,210 - INFO - [OK] EHR data read: 5 patients
+2026-02-23 12:53:19,212 - INFO - [OK] Vitals data read: 7 records
+2026-02-23 12:53:19,213 - INFO - [OK] Labs data read: 5 records
+2026-02-23 12:53:19,213 - INFO - STEP 3 & 4: Cleaning data...
+2026-02-23 12:53:19,223 - INFO - [OK] EHR data cleaned: 5 records
+2026-02-23 12:53:19,225 - INFO - [OK] Vitals data cleaned: 7 records
+2026-02-23 12:53:19,227 - INFO - [OK] Labs data cleaned: 5 records
+2026-02-23 12:53:19,231 - INFO - STEP 5 & 6: Creating patient master table...
+2026-02-23 12:53:19,243 - INFO - [OK] Patient master table created: 5 patients
+2026-02-23 12:53:19,245 - INFO - STEP 7: Detecting anomalies...
+2026-02-23 12:53:19,247 - INFO - [OK] Anomalies detected: 4 records
+2026-02-23 12:53:19,248 - INFO - Feature 1: Calculating risk severity scores...
+2026-02-23 12:53:19,250 - INFO - [OK] Risk severity scores calculated
+2026-02-23 12:53:19,252 - INFO - Feature 2: Simulating real-time vitals processing...
+2026-02-23 12:53:20,254 - INFO - [STREAM] P001 @ 2024-01-15 14:00:00: High HR
+2026-02-23 12:53:21,257 - INFO - [STREAM] P002 @ 2024-01-16 15:00:00: High HR, Low Oxygen, High BP
+2026-02-23 12:53:21,758 - INFO - [STREAM] P003 @ 2024-01-17 10:00:00: Low Oxygen
+2026-02-23 12:53:22,759 - INFO - [STREAM] P005 @ 2024-01-19 09:00:00: Low Oxygen, High BP
+2026-02-23 12:53:22,759 - INFO - [OK] Real-time simulation complete: 4 anomalies detected
+2026-02-23 12:53:22,759 - INFO - STEP 8: Creating visualizations...
+2026-02-23 12:53:23,414 - INFO - [OK] Oxygen distribution chart created
+2026-02-23 12:53:23,910 - INFO - [OK] Anomaly count chart created
+2026-02-23 12:53:24,678 - INFO - [OK] Heart rate trend chart created
+2026-02-23 12:53:24,678 - INFO - Creating severity distribution chart...
+2026-02-23 12:53:25,084 - INFO - [OK] Severity distribution chart created
+2026-02-23 12:53:25,084 - INFO - ======================================================================
+2026-02-23 12:53:25,084 - INFO - PIPELINE EXECUTION COMPLETED SUCCESSFULLY
+2026-02-23 12:53:25,084 - INFO - ======================================================================
+2026-02-23 12:53:25,084 - INFO - Bronze Layer: 3 files
+2026-02-23 12:53:25,085 - INFO - Silver Layer: 4 files
+2026-02-23 12:53:25,085 - INFO - Gold Layer: 1 files
+2026-02-23 12:53:25,085 - INFO - Visualizations: 4 files
