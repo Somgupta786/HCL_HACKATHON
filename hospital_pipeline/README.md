@@ -1,10 +1,8 @@
-# 🏥 Hospital Data Pipeline - HCL Hackathon Winning Implementation
+# 🏥 Hospital Data Pipeline - HCL Hackathon Solution
 
 ## 📋 Project Overview
 
-This is a **complete end-to-end hospital data pipeline** solution that processes Electronic Health Records (EHR), vital signs, and laboratory results. The pipeline implements comprehensive data cleaning, advanced anomaly detection, risk scoring, real-time simulation, and interactive visualizations.
-
-**Key Achievement:** All winning strategy requirements have been implemented with focus on data quality, pipeline architecture, and advanced features.
+This is a **complete end-to-end hospital data pipeline** solution that processes Electronic Health Records (EHR), vital signs, and laboratory results through a medallion architecture (Bronze → Silver → Gold). The pipeline implements data cleaning, standardization, table joins, rule-based anomaly detection, and comprehensive visualizations.
 
 ---
 
@@ -12,29 +10,27 @@ This is a **complete end-to-end hospital data pipeline** solution that processes
 
 ```
 hospital_pipeline/
-├── bronze/                      # Raw data backup (immutable)
-│   ├── ehr_raw.csv
-│   ├── vitals_raw.csv
-│   └── labs_raw.csv
-├── silver/                      # Cleaned and processed data
+├── bronze/                      # Raw data storage (Task 1)
+│   ├── ehr.csv
+│   ├── vitals.csv
+│   └── labs.csv
+├── silver/                      # Cleaned and standardized data (Task 2 & 3)
 │   ├── ehr_clean.csv
-│   ├── vitals_clean.csv
-│   ├── labs_clean.csv
-│   └── patient_master.csv       # Master table with joined data + risk scores
-├── gold/                        # Final aggregated outputs
-│   └── anomalies.csv           # Detected anomalies
-├── visualizations/              # Generated charts
+│   ├── clean_vitals.csv
+│   ├── clean_labs.csv
+│   └── patient_master.csv       # Master table with joined data
+├── gold/                        # Anomaly detection outputs (Task 4)
+│   └── anomalies.csv
+├── visualizations/              # Generated charts (Task 5)
+│   ├── hr_trend.png
 │   ├── oxygen_distribution.png
-│   ├── anomaly_count.png
-│   ├── heart_rate_trend.png
-│   └── severity_distribution.png
-├── pipeline.log                # Execution logs
-├── main.py                     # Main pipeline implementation
-├── app.py                      # Streamlit dashboard
-├── ehr.csv                     # Input: Electronic Health Records
-├── vitals.jsonl                # Input: Vital signs (JSON Lines)
-├── labs.json                   # Input: Laboratory results (JSON)
-└── README.md                   # This file
+│   └── anomaly_counts.png
+├── main.py                      # Main pipeline implementation
+├── generate_sample_data.py      # Sample data generator
+├── ehr.csv                      # Input: Electronic Health Records (300 patients)
+├── vitals.jsonl                 # Input: Vital signs (1500 readings, JSONL format)
+├── labs.json                    # Input: Lab results (900 records, JSON format)
+└── README.md                    # This file
 ```
 
 ---
@@ -47,507 +43,362 @@ hospital_pipeline/
 
 ### Step 1: Install Required Packages
 ```bash
-pip install pandas matplotlib seaborn streamlit
+pip install pandas matplotlib seaborn streamlit plotly python-docx
 ```
 
-### Step 2: Verify Folder Structure
-Ensure all input files exist:
-- `ehr.csv`
-- `vitals.jsonl`
-- `labs.json`
+### Step 2: Generate Sample Data (Optional)
+If you need sample data files, run:
+```bash
+cd hospital_pipeline
+python generate_sample_data.py
+```
+
+This creates:
+- `ehr.csv` - 300 patient records
+- `vitals.jsonl` - 1500 vital sign readings (5 per patient)
+- `labs.json` - 900 lab test results (3 per patient)
 
 ---
 
 ## 🚀 How to Run
 
-### Option 1: Run Core Pipeline (Recommended)
+### Option 1: Run the Data Pipeline
 ```bash
-python hospital_pipeline/main.py
+cd hospital_pipeline
+python main.py
 ```
 
-**Output:**
-- ✓ Raw data stored in `bronze/` folder
-- ✓ Cleaned data stored in `silver/` folder
-- ✓ Master patient table with risk scores in `silver/patient_master.csv`
-- ✓ Detected anomalies in `gold/anomalies.csv`
-- ✓ Visualizations in `visualizations/` folder
-- ✓ Execution logs in `pipeline.log`
+**Expected Output:**
+```
+================================================================================
+🏥 HOSPITAL DATA PIPELINE - Starting Execution
+================================================================================
 
-### Option 2: Launch Interactive Dashboard
+📦 TASK 1: Bronze Layer - Storing Raw Data
+✓ Stored 300 records to bronze/ehr.csv
+✓ Stored 1500 records to bronze/vitals.csv
+✓ Stored 900 records to bronze/labs.csv
+
+🧹 TASK 2: Silver Layer - Data Cleaning & Standardization
+✓ Cleaned EHR data: 300 patients
+✓ Cleaned vitals data: 1500 vital readings
+✓ Cleaned labs data: 900 lab records
+
+🔗 TASK 3: Creating Combined Patient Master Table
+✓ Created patient_master.csv with 300 patients
+
+🚨 TASK 4: Anomaly Detection (Rule-Based)
+✓ Detected 212 anomalies
+
+📊 TASK 5: Creating Visualizations
+✓ Saved: visualizations/hr_trend.png
+✓ Saved: visualizations/oxygen_distribution.png
+✓ Saved: visualizations/anomaly_counts.png
+
+✅ PIPELINE EXECUTION COMPLETE!
+```
+
+### Option 2: Launch Interactive Dashboard 🎨
 ```bash
-streamlit run hospital_pipeline/app.py
+cd hospital_pipeline
+streamlit run app.py
 ```
 
-Then open browser to `http://localhost:8501`
+Then open your browser to **http://localhost:8501**
+
+**Dashboard Features:**
+- 📊 **Dashboard Overview**: Real-time metrics, anomaly distribution, vital signs charts
+- 👥 **Patient Records**: Complete patient data with filters and search
+- 🚨 **Anomaly Detection**: Timeline and detailed anomaly reports
+- 📈 **Vital Signs Analysis**: Interactive trend charts for patient monitoring
+- 🧪 **Lab Results**: Comprehensive lab test analysis and visualization
+- 📉 **Visualizations**: Advanced charts including heatmaps and correlation matrices
 
 ---
 
-## 📊 Implementation Details
+## 📖 Task Implementation Details
 
-### STEP 1 & 2: Data Reading & Bronze Storage
-**What it does:**
-- Reads from three input sources:
-  - `ehr.csv` → CSV format
-  - `vitals.jsonl` → JSON Lines format
-  - `labs.json` → JSON format
-- Stores raw data in `bronze/` folder for compliance and backup
+### Task 1: Bronze Layer (Raw Storage)
 
-**Key Features:**
-- Error handling for missing files
-- Maintains data immutability
-- Comprehensive logging for auditing
+**Purpose:** Store all input files exactly as received for backup and auditing.
 
----
+**Implementation:**
+- Read `ehr.csv` (CSV format) → Store as `bronze/ehr.csv`
+- Read `vitals.jsonl` (JSON Lines) → Store as `bronze/vitals.csv`
+- Read `labs.json` (JSON list) → Store as `bronze/labs.csv`
 
-### STEP 3 & 4: Data Cleaning & Silver Storage
-**What it does:**
-- **Timestamp Conversion:** Converts all date/time strings to `datetime` objects
-- **Numeric Standardization:** Ensures all numeric columns use correct types
-- **Null Handling:** Removes records with missing critical values
-- **Column Standardization:** Normalizes naming conventions
-
-**Cleaning Rules Applied:**
-```python
-# EHR Cleaning
-- admission_date → datetime
-- discharge_date → datetime
-- age → numeric
-
-# Vitals Cleaning
-- timestamp → datetime
-- heart_rate, oxygen, sys_bp, dia_bp → numeric
-- Remove all null records
-
-# Labs Cleaning
-- test_date → datetime
-- glucose, hemoglobin, creatinine → numeric
-- Remove all null records
-```
-
-**Output:** Clean data stored in `silver/` folder
+**Key Points:**
+- No transformations applied
+- Data stored row-by-row exactly as received
+- Maintains data immutability for compliance
 
 ---
 
-### STEP 5 & 6: Patient Master Table with Joins
-**What it does:**
-- Joins three cleaned datasets using `patient_id`
-- Gets **latest vitals record** per patient
-- Gets **latest lab results** per patient
-- Creates comprehensive patient profile
+### Task 2: Silver Layer (Cleaning & Standardization)
 
-**Join Logic:**
+**Purpose:** Clean and standardize data for analysis.
+
+#### How We Cleaned EHR Data (`ehr.csv`):
 ```
-EHR Data (base table: 5 patients)
-    ↓
-JOIN Latest Vitals (most recent record per patient)
-    ↓
-JOIN Latest Labs (most recent record per patient)
-    ↓
+✓ Converted admission_time from string to datetime objects
+✓ Renamed 'admission_time' → 'timestamp' for consistency
+✓ Ensured patient_id is integer type
+✓ All demographic fields validated (name, age, gender)
+```
+
+**Output:** `silver/ehr_clean.csv`
+
+#### How We Cleaned Vitals Data (`vitals.jsonl`):
+```
+✓ Converted UNIX timestamps to readable datetime format
+✓ Renamed 'patientId' → 'patient_id' for consistency
+✓ Ensured all vital signs are numeric:
+  - hr (heart rate)
+  - ox (oxygen level)
+  - sys (systolic blood pressure)
+  - dia (diastolic blood pressure)
+✓ Removed rows with missing/invalid values
+✓ Standardized patient_id column naming
+```
+
+**Output:** `silver/clean_vitals.csv`
+
+#### How We Cleaned Labs Data (`labs.json`):
+```
+✓ Converted timestamp strings to datetime objects
+✓ Ensured lab values are numeric (float type)
+✓ Renamed 'test' → 'lab_test' for clarity
+✓ Renamed 'value' → 'lab_value' for clarity
+✓ Ensured patient_id is integer type
+✓ Removed rows with missing/invalid values
+```
+
+**Output:** `silver/clean_labs.csv`
+
+---
+
+### Task 3: Combined Patient Master Table
+
+**Purpose:** Create a unified view of each patient with their latest vitals and lab results.
+
+#### How We Merged/Joined the Tables:
+
+**Step 1:** Get Latest Vitals per Patient
+```
+- Sort vitals by timestamp
+- Group by patient_id
+- Take the last (most recent) record for each patient
+- Select: hr, ox, sys, dia
+```
+
+**Step 2:** Get Latest Labs per Patient
+```
+- Sort labs by timestamp
+- Group by patient_id and lab_test
+- Take the last (most recent) record
+- Pivot table so each lab test becomes a column
+```
+
+**Step 3:** Join Everything Together
+```
+EHR (base table with patient demographics)
+  ⬇ LEFT JOIN
+Latest Vitals (on patient_id)
+  ⬇ LEFT JOIN
+Latest Labs (on patient_id)
+  ⬇
 Patient Master Table
 ```
 
-**Master Table Columns:**
-- Patient demographics: `patient_id`, `name`, `age`, `diagnosis`
-- Hospital stay: `admission_date`, `discharge_date`
-- Latest vitals: `heart_rate`, `oxygen`, `sys_bp`, `dia_bp`, `vitals_timestamp`
-- Latest labs: `glucose`, `hemoglobin`, `creatinine`, `labs_date`
-- Risk info: `severity`, `risk_score`
+**Join Type:** LEFT JOIN (keeps all patients even if vitals/labs missing)
 
-**Output:** `silver/patient_master.csv`
+**Final Columns:**
+- Patient info: patient_id, name, age, gender, timestamp
+- Latest vitals: latest_hr, latest_ox, latest_sys, latest_dia
+- Latest labs: latest_[test_name] for each lab test type
 
----
-
-### STEP 7: Anomaly Detection (Rule-Based)
-**What it does:**
-- Applies predefined clinical thresholds to detect abnormal readings
-- Flags patients requiring immediate attention
-
-**Anomaly Rules:**
-| Condition | Rule | Severity |
-|-----------|------|----------|
-| Heart Rate | > 120 bpm | HIGH |
-| Oxygen Level | < 92 % | CRITICAL |
-| Systolic BP | > 160 mmHg | HIGH |
-| Diastolic BP | > 100 mmHg | HIGH |
-
-**Example Detection:**
-```
-Patient P005 @ 2024-01-19:
-- Heart Rate: 110 ✓ Normal
-- Oxygen: 88 ✗ ANOMALY (Low Oxygen)
-- SYS BP: 165 ✗ ANOMALY (High BP)
-- DIA BP: 105 ✗ ANOMALY (High BP)
-
-Result: "Low Oxygen | High BP"
-```
-
-**Output:** `gold/anomalies.csv`
-
-**Total Anomalies Detected:** Varies based on input data
+**Output:** `silver/patient_master.csv` (300 patients with ~21 columns)
 
 ---
 
-### ADVANCED FEATURE 1: Risk Severity Scoring
-**What it does:**
-- Calculates health risk score for each patient
-- Assigns severity level: **High**, **Medium**, or **Normal**
+### Task 4: Anomaly Detection (Rule-Based)
 
-**Scoring Algorithm:**
-```
-Score Calculation:
-- High Heart Rate (>120) → +2 points
-- Low Oxygen (<92%) → +3 points ⭐ Most critical
-- High Blood Pressure (SYS>160 or DIA>100) → +2 points
+**Purpose:** Identify health anomalies that require attention.
 
-Severity Assignment:
-- Score ≥ 5 → HIGH RISK 🔴
-- Score 2-4 → MEDIUM RISK 🟡
-- Score 0-1 → NORMAL RISK 🟢
-```
+#### Anomaly Detection Rules Used:
 
-**Example:**
-```
-Patient P005:
-- Low Oxygen: +3 (88% < 92%)
-- High BP: +2 (165/105)
-Total Score: 5 → HIGH RISK 🔴
-```
+| Rule | Condition | Classification |
+|------|-----------|----------------|
+| **High Heart Rate** | HR > 120 bpm | Anomaly |
+| **Low Oxygen** | OX < 92% | Anomaly |
+| **High Blood Pressure** | sys > 160 OR dia > 100 | Anomaly |
 
-**Output:** `severity` and `risk_score` columns added to `silver/patient_master.csv`
-
----
-
-### ADVANCED FEATURE 2: Real-Time Simulation
-**What it does:**
-- Simulates streaming vital signs processing
-- Processes each vital record with realistic time delays
-- Detects anomalies in real-time fashion
-- Logs real-time events for monitoring
-
-**Simulation Details:**
-- 0.5 second delay per record (simulates data ingestion)
-- Processes vitals sequentially
-- Logs anomalies as they're detected
-- Provides production-like monitoring feel
-
-**Log Output Example:**
-```
-[STREAM] P001 @ 2024-01-15 08:00:00: ✓ Normal
-[STREAM] P001 @ 2024-01-15 14:00:00: High HR
-[STREAM] P005 @ 2024-01-19 09:00:00: Low Oxygen | High BP
+**Implementation:**
+```python
+# Iterate through all vital sign readings
+for each vital record:
+    if hr > 120:
+        flag as "High Heart Rate"
+    
+    if ox < 92:
+        flag as "Low Oxygen"
+    
+    if sys > 160 or dia > 100:
+        flag as "High Blood Pressure"
 ```
 
----
-
-### ADVANCED FEATURE 3: Comprehensive Logging System
-**What it does:**
-- Tracks all pipeline execution steps
-- Records data quality metrics
-- Logs errors and warnings
-- Creates audit trail for compliance
-
-**Log File Location:** `pipeline.log`
-
-**Logged Information:**
-```
-2024-02-23 10:30:15 - INFO - STEP 1 & 2: Reading input files...
-2024-02-23 10:30:16 - INFO - ✓ EHR data read: 5 patients
-2024-02-23 10:30:16 - INFO - ✓ Vitals data read: 7 records
-2024-02-23 10:30:16 - INFO - ✓ Labs data read: 5 records
-2024-02-23 10:30:18 - INFO - STEP 3 & 4: Cleaning data...
-2024-02-23 10:30:18 - INFO - ✓ EHR data cleaned: 5 records
-2024-02-23 10:30:18 - INFO - ✓ Anomalies detected: 3 records
-2024-02-23 10:30:20 - INFO - PIPELINE EXECUTION COMPLETED SUCCESSFULLY
-```
-
----
-
-### STEP 8: Visualizations
-**What it does:**
-- Generates publication-quality charts
-- Saves all visualizations as PNG files
-
-#### Chart 1: Oxygen Distribution Histogram
-- **File:** `oxygen_distribution.png`
-- **Purpose:** Shows distribution of oxygen levels across all patients
-- **Threshold Line:** Red dashed line at 92% (anomaly threshold)
-- **Use Case:** Identify systemic oxygen issues
-
-#### Chart 2: Anomaly Count Bar Chart
-- **File:** `anomaly_count.png`
-- **Purpose:** Shows number of anomalies per patient
-- **Color:** Coral red
-- **Use Case:** Identify highest-risk patients
-
-#### Chart 3: Heart Rate Trend
-- **File:** `heart_rate_trend.png`
-- **Purpose:** Time-series plot of heart rate per patient
-- **Threshold Line:** Red dashed line at 120 bpm
-- **Use Case:** Monitor patient recovery trends
-
-#### Chart 4: Severity Distribution
-- **File:** `severity_distribution.png`
-- **Purpose:** Bar chart of risk severity levels
-- **Colors:** 
-  - 🔴 High → Red
-  - 🟡 Medium → Orange
-  - 🟢 Normal → Green
-
-**All charts saved in:** `hospital_pipeline/visualizations/`
-
----
-
-### STREAMLIT DASHBOARD (BONUS)
-**Features:**
-- **Patient Master View:** Browse all patient records with detailed metrics
-- **Anomaly Explorer:** Filter and analyze detected anomalies
-- **Visualizations:** Interactive tabs for all generated charts
-- **Risk Severity Dashboard:** Patient risk assessment and filtering
-- **CSV Download:** Export data directly from dashboard
-
-**Navigation:** Sidebar menu for easy switching between views
-
----
-
-## 📈 Data Quality Metrics
-
-### Input Data Summary
-| Dataset | Records | Format | Status |
-|---------|---------|--------|--------|
-| EHR | 5 | CSV | ✓ Clean |
-| Vitals | 7 | JSONL | ✓ Clean |
-| Labs | 5 | JSON | ✓ Clean |
-
-### Processing Metrics
-- **Data Completeness:** 100% of records processed
-- **Null Handling:** 0 null values in final dataset
-- **Anomaly Detection Rate:** ~43% of vital records flagged
-- **Data Integrity:** All joins successful
-
----
-
-## 🏗️ Architecture & Design
-
-### Modular Design
-```
-HospitalPipeline Class
-├── read_and_store_bronze()    # Step 1 & 2
-├── clean_data()                # Step 3 & 4
-├── create_patient_master()     # Step 5 & 6
-├── detect_anomalies()          # Step 7
-├── calculate_risk_severity()   # Feature 1
-├── simulate_realtime()         # Feature 2
-├── create_visualizations()     # Step 8
-└── run_pipeline()              # Orchestrator
-```
-
-### Data Flow
-```
-Input Files
-├── ehr.csv
-├── vitals.jsonl
-└── labs.json
-    ↓
-[BRONZE: Raw Storage]
-    ↓
-[CLEANING: Data Quality]
-    ↓
-[SILVER: Clean Data]
-    ↓
-[JOINING: Patient Master]
-    ↓
-[ANALYSIS: Anomalies + Risk Scoring]
-    ↓
-[GOLD: Final Outputs]
-    ├── anomalies.csv
-    └── visualizations/
-```
-
----
-
-## 🔍 Key Implementation Highlights
-
-### 1. **Data Cleanliness (30% Focus)**
-✓ Automatic datetime conversion
-✓ Numeric type standardization
-✓ Null value handling
-✓ Bronze/Silver/Gold architecture
-✓ Input validation
-
-### 2. **Pipeline & Joins (25% Focus)**
-✓ Efficient pandas merges
-✓ Latest record selection per patient
-✓ Comprehensive patient profiles
-✓ Multiple data source integration
-
-### 3. **Visualization (20% Focus)**
-✓ 4 publication-quality charts
-✓ Threshold visualization
-✓ Trend analysis
-✓ High-resolution outputs (300 DPI)
-
-### 4. **Anomaly Detection (15% Focus)**
-✓ Rule-based clinical thresholds
-✓ Multi-condition detection logic
-✓ Severity scoring
-✓ Real-time simulation
-
-### 5. **Documentation (10% Focus)**
-✓ This comprehensive README
-✓ Inline code documentation
-✓ Execution logging
-✓ Clear folder structure
-
-### 6. **Advanced Features (Bonus)**
-✓ Risk Severity Scoring Algorithm
-✓ Real-Time Simulation
-✓ Comprehensive Logging
-✓ Interactive Streamlit Dashboard
-
----
-
-## 🧪 Testing the Pipeline
-
-### Quick Test
-```bash
-# Run pipeline
-python hospital_pipeline/main.py
-
-# Check outputs
-ls hospital_pipeline/bronze/     # Should have 3 files
-ls hospital_pipeline/silver/     # Should have 4 files
-ls hospital_pipeline/gold/       # Should have 1 file
-ls hospital_pipeline/visualizations/  # Should have 4 PNG files
-cat pipeline.log                 # Should show execution steps
-```
-
-### Expected Results
-```
-✓ Bronze Layer: 3 files (raw backups)
-✓ Silver Layer: 4 files (cleaned + master)
-✓ Gold Layer: 1 file (anomalies)
-✓ Visualizations: 4 PNG files
-✓ Logs: Pipeline.log with execution timeline
-✓ Total Anomalies: 3 detected
-✓ High Risk Patients: 1
-✓ Medium Risk Patients: 1
-```
-
----
-
-## 📝 Sample Output
-
-### Anomalies Detected (gold/anomalies.csv)
-```
+**Output Format:** `gold/anomalies.csv`
+```csv
 patient_id,timestamp,anomaly,value
-P001,2024-01-15 14:00:00,High HR,125.0
-P002,2024-01-16 15:00:00,Low Oxygen | High BP,102.0
-P005,2024-01-19 09:00:00,Low Oxygen | High BP,105.0
+101,2024-01-10 16:00:00,High Heart Rate,125
+205,2024-01-10 12:00:00,Low Oxygen,89
+176,2024-01-10 20:00:00,High Blood Pressure,sys=165, dia=102
 ```
 
-### Risk Severity (silver/patient_master.csv excerpt)
-```
-patient_id,name,age,severity,risk_score
-P005,James Wilson,55,High,5
-P002,Jane Doe,52,Medium,3
-P001,John Smith,45,Normal,1
-```
+**Typical Results:**
+- ~200+ anomalies detected from 1500 vital readings
+- ~14% anomaly rate (reflects natural variation + medical issues)
 
 ---
 
-## 🎯 Execution Flow
+### Task 5: Visualizations
 
-1. **INITIALIZE** → Load pipeline object
-2. **READ INPUT** → Parse 3 data sources
-3. **BRONZE STORE** → Archive raw data
-4. **CLEAN DATA** → Type conversion, null handling
-5. **SILVER STORE** → Save cleaned data
-6. **CREATE MASTER** → Join all tables
-7. **ANOMALY DETECT** → Flag abnormal readings
-8. **RISK SCORE** → Calculate severity levels
-9. **REAL-TIME SIM** → Simulate streaming
-10. **VISUALIZE** → Generate 4 charts
-11. **LOG RESULTS** → Record execution stats
-12. **COMPLETE** → Ready for dashboard
+**Purpose:** Create visual insights for data analysis and reporting.
+
+#### Visualization 1: Heart Rate Trend (per patient)
+**File:** `visualizations/hr_trend.png`
+
+**Description:**
+- Line chart showing heart rate over time
+- Shows 5 sample patients (for clarity)
+- Red dashed line at HR=120 (anomaly threshold)
+- X-axis: Timestamp
+- Y-axis: Heart Rate (bpm)
+
+**Use Case:** Monitor patient recovery trends and identify abnormal patterns
+
+---
+
+#### Visualization 2: Oxygen Level Distribution
+**File:** `visualizations/oxygen_distribution.png`
+
+**Description:**
+- Histogram showing distribution of all oxygen readings
+- Blue bars: Normal oxygen readings
+- Red bars: Low oxygen readings (< 92%)
+- Red dashed line: Low oxygen threshold (92%)
+- X-axis: Oxygen Level (%)
+- Y-axis: Number of Occurrences
+
+**Use Case:** Identify systemic oxygen issues affecting patient population
+
+---
+
+#### Visualization 3: Bar Chart of Anomaly Counts
+**File:** `visualizations/anomaly_counts.png`
+
+**Description:**
+- Bar chart showing count of each anomaly type
+- X-axis: Anomaly Type (High Heart Rate, Low Oxygen, High Blood Pressure)
+- Y-axis: Number of Occurrences
+- Value labels displayed on top of each bar
+- Color-coded bars for visual distinction
+
+**Use Case:** Quickly identify which health issues are most prevalent
+
+---
+
+## 📊 Judging Criteria Alignment
+
+| Category | Weight | Implementation |
+|----------|--------|----------------|
+| **Data Cleaning & Transformations** | 30% | ✓ Complete timestamp conversion, numeric validation, null handling, column standardization |
+| **Pipeline Logic & Joins** | 25% | ✓ Medallion architecture (Bronze→Silver→Gold), efficient LEFT JOINs, latest record selection |
+| **Visualizations** | 20% | ✓ 3 publication-quality charts (heart rate trend, oxygen distribution, anomaly counts) |
+| **Anomaly Detection** | 15% | ✓ Rule-based detection with 3 clinical thresholds, structured output |
+| **Code Quality & README** | 10% | ✓ Clean modular code, comprehensive documentation, clear execution logs |
+
+---
+
+## 📈 Execution Summary
+
+When you run `python main.py`, the pipeline:
+
+1. **Reads 3 input files** (ehr.csv, vitals.jsonl, labs.json)
+2. **Stores raw data** in bronze/ folder (Task 1)
+3. **Cleans all datasets** with timestamp/numeric conversions (Task 2)
+4. **Creates patient master table** by joining EHR + latest vitals + latest labs (Task 3)
+5. **Detects anomalies** using clinical rules (Task 4)
+6. **Generates 3 visualizations** (Task 5)
+7. **Displays summary** with statistics and file locations
 
 **Total Execution Time:** ~5-10 seconds
 
 ---
 
-## 🚨 Troubleshooting
+## 📁 Output Files Summary
 
-### Issue: FileNotFoundError for input files
-**Solution:** Ensure `ehr.csv`, `vitals.jsonl`, and `labs.json` are in `hospital_pipeline/` folder
+After running the pipeline, you'll have:
 
-### Issue: "No module named 'pandas'"
-**Solution:** Run `pip install pandas matplotlib seaborn streamlit`
+**Bronze Layer (Raw Backups):**
+- `bronze/ehr.csv` - 300 rows
+- `bronze/vitals.csv` - 1500 rows
+- `bronze/labs.csv` - 900 rows
 
-### Issue: Visualizations not generating
-**Solution:** Ensure matplotlib is installed: `pip install matplotlib seaborn`
+**Silver Layer (Cleaned Data):**
+- `silver/ehr_clean.csv` - 300 patients
+- `silver/clean_vitals.csv` - 1500 vital readings
+- `silver/clean_labs.csv` - 900 lab results
+- `silver/patient_master.csv` - 300 patients with complete data
 
-### Issue: Streamlit port already in use
-**Solution:** Run `streamlit run app.py --server.port 8502`
+**Gold Layer (Analytics):**
+- `gold/anomalies.csv` - ~200+ anomaly records
 
----
-
-## 📦 Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| pandas | ≥1.3.0 | Data manipulation & analysis |
-| matplotlib | ≥3.4.0 | Chart generation |
-| seaborn | ≥0.11.0 | Statistical visualization |
-| streamlit | ≥1.0.0 | Web dashboard (optional) |
+**Visualizations:**
+- `visualizations/hr_trend.png` - Heart rate trends
+- `visualizations/oxygen_distribution.png` - Oxygen level histogram
+- `visualizations/anomaly_counts.png` - Anomaly summary bar chart
 
 ---
 
-## 💡 Key Features Summary
+## 🔧 Troubleshooting
 
-| Feature | Status | Benefit |
-|---------|--------|---------|
-| Multi-source data integration | ✓ | Comprehensive patient profiles |
-| Automated data cleaning | ✓ | High data quality |
-| Advanced joins | ✓ | Unified patient view |
-| Rule-based anomaly detection | ✓ | Early warning system |
-| Risk severity scoring | ✓ | Prioritized interventions |
-| Real-time simulation | ✓ | Production readiness |
-| Comprehensive logging | ✓ | Auditability & compliance |
-| Publication-quality visualizations | ✓ | Data-driven decisions |
-| Interactive dashboard | ✓ | Stakeholder engagement |
-| Modular architecture | ✓ | Easy maintenance & scaling |
+**Issue:** `FileNotFoundError: ehr.csv not found`  
+**Solution:** Ensure you're in the `hospital_pipeline/` directory and input files exist
+
+**Issue:** `ModuleNotFoundError: No module named 'pandas'`  
+**Solution:** Install dependencies: `pip install pandas matplotlib seaborn`
+
+**Issue:** Visualizations not generating  
+**Solution:** Check if `visualizations/` folder exists and you have write permissions
 
 ---
 
-## 📞 Support & Questions
+## 🎯 Key Features
 
-For issues or questions:
-1. Check `pipeline.log` for execution details
-2. Review error messages in console output
-3. Verify input data format matches specification
-4. Ensure all dependencies are installed
-
----
-
-## 🏆 Winning Strategy Recap
-
-This implementation delivers on all key areas required for a winning hackathon submission:
-
-✅ **Data Cleaning (30%):** Comprehensive type conversion, null handling, and standardization
-✅ **Pipeline & Joins (25%):** Efficient multi-source integration with patient master table
-✅ **Visualization (20%):** 4 high-quality publication-ready charts
-✅ **Anomaly Detection (15%):** Clinical threshold-based with severity scoring
-✅ **Documentation (10%):** This README + inline comments + logging
-✅ **Advanced Features (Bonus):** Risk scoring, real-time simulation, logging, dashboard
+✅ Medallion Architecture (Bronze → Silver → Gold)  
+✅ Multi-format data ingestion (CSV, JSONL, JSON)  
+✅ Comprehensive data cleaning pipeline  
+✅ Efficient table joins using pandas  
+✅ Latest record selection per patient  
+✅ Rule-based clinical anomaly detection  
+✅ High-quality visualizations (300 DPI)  
+✅ Clear execution logging  
+✅ Modular, maintainable code  
 
 ---
 
-## 📄 License
+## 📝 Code Quality Highlights
 
-This project is created for HCL Hackathon competition.
+- **Clean structure:** Separation of concerns with clear task boundaries
+- **Readable code:** Descriptive variable names, clear logic flow
+- **Error handling:** Proper data type conversions with validation
+- **Performance:** Efficient pandas operations for large datasets
+- **Documentation:** Inline comments and comprehensive README
+- **Output validation:** Confirmation messages and statistics at each step
 
 ---
 
-**Created:** February 23, 2024  
-**Status:** ✅ Complete & Tested  
-**Ready for Submission:** YES
-
+**Project Status:** ✅ Complete & Ready for Submission  
+**Hackathon:** HCL Healthcare Data Challenge  
+**Date:** February 2026

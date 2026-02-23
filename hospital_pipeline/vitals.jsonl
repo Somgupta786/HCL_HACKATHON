@@ -1,7 +1,0 @@
-{"patient_id": "P001", "timestamp": "2024-01-15 08:00:00", "heart_rate": 78, "oxygen": 95, "sys_bp": 130, "dia_bp": 85}
-{"patient_id": "P001", "timestamp": "2024-01-15 14:00:00", "heart_rate": 125, "oxygen": 94, "sys_bp": 135, "dia_bp": 88}
-{"patient_id": "P002", "timestamp": "2024-01-16 09:00:00", "heart_rate": 72, "oxygen": 97, "sys_bp": 120, "dia_bp": 80}
-{"patient_id": "P002", "timestamp": "2024-01-16 15:00:00", "heart_rate": 122, "oxygen": 90, "sys_bp": 155, "dia_bp": 102}
-{"patient_id": "P003", "timestamp": "2024-01-17 10:00:00", "heart_rate": 89, "oxygen": 91, "sys_bp": 140, "dia_bp": 90}
-{"patient_id": "P004", "timestamp": "2024-01-18 08:30:00", "heart_rate": 95, "oxygen": 93, "sys_bp": 125, "dia_bp": 82}
-{"patient_id": "P005", "timestamp": "2024-01-19 09:00:00", "heart_rate": 110, "oxygen": 88, "sys_bp": 165, "dia_bp": 105}

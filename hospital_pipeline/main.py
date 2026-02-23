@@ -1,368 +1,399 @@
 """
-Hospital Data Pipeline - Main Module
-Handles ETL, anomaly detection, risk scoring, and visualizations
+Hospital Data Pipeline - HCL Hackathon
+
+This pipeline processes hospital data through Bronze, Silver, and Gold layers:
+- Bronze: Raw data storage
+- Silver: Cleaned and standardized data
+- Gold: Anomaly detection and analysis outputs
+- Visualizations: Charts and graphs
+
+Author: HCL Hackathon Team
 """
 
 import pandas as pd
 import json
-import os
-import logging
-from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
-import time
+from datetime import datetime
+import os
+import warnings
+from docx import Document
+warnings.filterwarnings('ignore')
 
-# Configure logging
-log_file = 'pipeline.log'
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file, encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Set plotting style
+sns.set_style("whitegrid")
+plt.rcParams['figure.figsize'] = (10, 6)
 
-# Folder paths
-BRONZE_PATH = 'hospital_pipeline/bronze/'
-SILVER_PATH = 'hospital_pipeline/silver/'
-GOLD_PATH = 'hospital_pipeline/gold/'
-VIZ_PATH = 'hospital_pipeline/visualizations/'
+print("=" * 80)
+print("🏥 HOSPITAL DATA PIPELINE - Starting Execution")
+print("=" * 80)
 
 
-class HospitalPipeline:
-    """Hospital data pipeline processor"""
+# ============================================================================
+# TASK 1: BRONZE LAYER - Raw Data Storage
+# ============================================================================
+print("\n📦 TASK 1: Bronze Layer - Storing Raw Data")
+print("-" * 80)
+
+# Read ehr.csv
+print("Reading ehr.csv...")
+ehr_df = pd.read_csv('ehr.csv')
+ehr_df.to_csv('bronze/ehr.csv', index=False)
+print(f"✓ Stored {len(ehr_df)} records to bronze/ehr.csv")
+
+# Read vitals.docx
+print("Reading vitals.docx...")
+try:
+    doc = Document('vitals.docx')
+    vitals_data = []
     
-    def __init__(self):
-        self.ehr_df = None
-        self.vitals_df = None
-        self.labs_df = None
-        self.patient_master = None
-        self.anomalies = None
-        
-    # ============ STEP 1 & 2: Read Input Files and Store in Bronze ============
-    def read_and_store_bronze(self):
-        """Read input files and store raw data in bronze folder"""
-        logger.info("STEP 1 & 2: Reading input files and storing in bronze folder...")
-        
-        # Read EHR data
+    # Check if data is in tables
+    if doc.tables:
+        for table in doc.tables:
+            headers = [cell.text.strip() for cell in table.rows[0].cells]
+            for row in table.rows[1:]:
+                row_data = [cell.text.strip() for cell in row.cells]
+                if any(row_data):
+                    vitals_data.append(dict(zip(headers, row_data)))
+    else:
+        # Data is in paragraphs as JSON/JSONL format
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if text and text.startswith('{'):
+                try:
+                    vitals_data.append(json.loads(text))
+                except json.JSONDecodeError:
+                    pass
+    
+    vitals_df = pd.DataFrame(vitals_data)
+    vitals_df.to_csv('bronze/vitals.csv', index=False)
+    print(f"✓ Stored {len(vitals_df)} records to bronze/vitals.csv")
+except Exception as e:
+    print(f"⚠ Warning: Could not read vitals.docx: {e}")
+    print("  Trying vitals.jsonl as fallback...")
+    vitals_list = []
+    with open('vitals.jsonl', 'r') as f:
+        for line in f:
+            vitals_list.append(json.loads(line))
+    vitals_df = pd.DataFrame(vitals_list)
+    vitals_df.to_csv('bronze/vitals.csv', index=False)
+    print(f"✓ Stored {len(vitals_df)} records to bronze/vitals.csv")
+
+# Read labs.docx
+print("Reading labs.docx...")
+try:
+    doc = Document('labs.docx')
+    labs_data = []
+    
+    # Check if data is in tables
+    if doc.tables:
+        for table in doc.tables:
+            headers = [cell.text.strip() for cell in table.rows[0].cells]
+            for row in table.rows[1:]:
+                row_data = [cell.text.strip() for cell in row.cells]
+                if any(row_data):
+                    labs_data.append(dict(zip(headers, row_data)))
+    else:
+        # Data is in paragraphs as JSON array format
+        full_text = '\n'.join([para.text for para in doc.paragraphs])
         try:
-            self.ehr_df = pd.read_csv('hospital_pipeline/ehr.csv')
-            # Store in bronze
-            self.ehr_df.to_csv(f'{BRONZE_PATH}ehr_raw.csv', index=False)
-            logger.info(f"[OK] EHR data read: {len(self.ehr_df)} patients")
-        except Exception as e:
-            logger.error(f"[ERR] Error reading EHR: {e}")
-        
-        # Read Vitals data from JSONL
-        try:
-            vitals_list = []
-            with open('hospital_pipeline/vitals.jsonl', 'r') as f:
-                for line in f:
-                    vitals_list.append(json.loads(line))
-            self.vitals_df = pd.DataFrame(vitals_list)
-            # Store in bronze
-            self.vitals_df.to_csv(f'{BRONZE_PATH}vitals_raw.csv', index=False)
-            logger.info(f"[OK] Vitals data read: {len(self.vitals_df)} records")
-        except Exception as e:
-            logger.error(f"[ERR] Error reading Vitals: {e}")
-        
-        # Read Labs data from JSON
-        try:
-            with open('hospital_pipeline/labs.json', 'r') as f:
-                labs_list = json.load(f)
-            self.labs_df = pd.DataFrame(labs_list)
-            # Store in bronze
-            self.labs_df.to_csv(f'{BRONZE_PATH}labs_raw.csv', index=False)
-            logger.info(f"[OK] Labs data read: {len(self.labs_df)} records")
-        except Exception as e:
-            logger.error(f"[ERR] Error reading Labs: {e}")
+            labs_data = json.loads(full_text)
+        except json.JSONDecodeError:
+            # Try parsing line by line as JSONL
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if text and text.startswith('{'):
+                    try:
+                        labs_data.append(json.loads(text))
+                    except json.JSONDecodeError:
+                        pass
     
-    # ============ STEP 3 & 4: Clean Data and Store in Silver ============
-    def clean_data(self):
-        """Clean data - convert timestamps, ensure numeric, remove nulls, standardize columns"""
-        logger.info("STEP 3 & 4: Cleaning data...")
-        
-        # Clean EHR data
-        self.ehr_df['admission_date'] = pd.to_datetime(self.ehr_df['admission_date'])
-        self.ehr_df['discharge_date'] = pd.to_datetime(self.ehr_df['discharge_date'])
-        self.ehr_df['age'] = pd.to_numeric(self.ehr_df['age'], errors='coerce')
-        self.ehr_df.dropna(subset=['patient_id'], inplace=True)
-        logger.info(f"[OK] EHR data cleaned: {len(self.ehr_df)} records")
-        
-        # Clean Vitals data
-        if self.vitals_df is not None:
-            self.vitals_df['timestamp'] = pd.to_datetime(self.vitals_df['timestamp'])
-            self.vitals_df['heart_rate'] = pd.to_numeric(self.vitals_df['heart_rate'], errors='coerce')
-            self.vitals_df['oxygen'] = pd.to_numeric(self.vitals_df['oxygen'], errors='coerce')
-            self.vitals_df['sys_bp'] = pd.to_numeric(self.vitals_df['sys_bp'], errors='coerce')
-            self.vitals_df['dia_bp'] = pd.to_numeric(self.vitals_df['dia_bp'], errors='coerce')
-            self.vitals_df.dropna(inplace=True)
-            logger.info(f"[OK] Vitals data cleaned: {len(self.vitals_df)} records")
-        
-        # Clean Labs data
-        if self.labs_df is not None:
-            self.labs_df['test_date'] = pd.to_datetime(self.labs_df['test_date'])
-            self.labs_df['glucose'] = pd.to_numeric(self.labs_df['glucose'], errors='coerce')
-            self.labs_df['hemoglobin'] = pd.to_numeric(self.labs_df['hemoglobin'], errors='coerce')
-            self.labs_df['creatinine'] = pd.to_numeric(self.labs_df['creatinine'], errors='coerce')
-            self.labs_df.dropna(inplace=True)
-            logger.info(f"[OK] Labs data cleaned: {len(self.labs_df)} records")
-        
-        # Save cleaned data to silver
-        self.ehr_df.to_csv(f'{SILVER_PATH}ehr_clean.csv', index=False)
-        if self.vitals_df is not None:
-            self.vitals_df.to_csv(f'{SILVER_PATH}vitals_clean.csv', index=False)
-        if self.labs_df is not None:
-            self.labs_df.to_csv(f'{SILVER_PATH}labs_clean.csv', index=False)
-    
-    # ============ STEP 5 & 6: Create Patient Master Table with Joins ============
-    def create_patient_master(self):
-        """Join EHR + latest vitals + latest labs"""
-        logger.info("STEP 5 & 6: Creating patient master table...")
-        
-        # Get latest vitals per patient
-        latest_vitals = self.vitals_df.sort_values('timestamp').groupby('patient_id').tail(1)[
-            ['patient_id', 'heart_rate', 'oxygen', 'sys_bp', 'dia_bp', 'timestamp']
-        ].rename(columns={'timestamp': 'vitals_timestamp'})
-        
-        # Get latest labs per patient
-        latest_labs = self.labs_df.sort_values('test_date').groupby('patient_id').tail(1)[
-            ['patient_id', 'glucose', 'hemoglobin', 'creatinine', 'test_date']
-        ].rename(columns={'test_date': 'labs_date'})
-        
-        # Merge all tables
-        self.patient_master = self.ehr_df.merge(latest_vitals, on='patient_id', how='left')
-        self.patient_master = self.patient_master.merge(latest_labs, on='patient_id', how='left')
-        
-        logger.info(f"[OK] Patient master table created: {len(self.patient_master)} patients")
-        
-        # Save patient master
-        self.patient_master.to_csv(f'{SILVER_PATH}patient_master.csv', index=False)
-    
-    # ============ STEP 7: Anomaly Detection ============
-    def detect_anomalies(self):
-        """Apply rule-based anomaly detection"""
-        logger.info("STEP 7: Detecting anomalies...")
-        
-        anomalies_list = []
-        
-        for _, row in self.vitals_df.iterrows():
-            anomaly_found = False
-            anomaly_type = []
-            max_value = None
-            
-            # Check Heart Rate >120
-            if row['heart_rate'] > 120:
-                anomaly_found = True
-                anomaly_type.append('High HR')
-                max_value = row['heart_rate']
-            
-            # Check Oxygen <92
-            if row['oxygen'] < 92:
-                anomaly_found = True
-                anomaly_type.append('Low Oxygen')
-                max_value = row['oxygen']
-            
-            # Check SYS>160 or DIA>100
-            if row['sys_bp'] > 160 or row['dia_bp'] > 100:
-                anomaly_found = True
-                anomaly_type.append('High BP')
-                max_value = max(row['sys_bp'], row['dia_bp'])
-            
-            if anomaly_found:
-                anomalies_list.append({
-                    'patient_id': row['patient_id'],
-                    'timestamp': row['timestamp'],
-                    'anomaly': ' | '.join(anomaly_type),
-                    'value': max_value
-                })
-        
-        self.anomalies = pd.DataFrame(anomalies_list)
-        logger.info(f"[OK] Anomalies detected: {len(self.anomalies)} records")
-        
-        # Save anomalies
-        self.anomalies.to_csv(f'{GOLD_PATH}anomalies.csv', index=False)
-    
-    # ============ ADVANCED FEATURE 1: Risk Severity Score ============
-    def calculate_risk_severity(self):
-        """Calculate health risk score based on anomalies"""
-        logger.info("Feature 1: Calculating risk severity scores...")
-        
-        def calculate_score(row):
-            score = 0
-            
-            # High HR (+2)
-            if pd.notna(row['heart_rate']) and row['heart_rate'] > 120:
-                score += 2
-            
-            # Low Oxygen (+3)
-            if pd.notna(row['oxygen']) and row['oxygen'] < 92:
-                score += 3
-            
-            # High BP (+2)
-            if (pd.notna(row['sys_bp']) and row['sys_bp'] > 160) or \
-               (pd.notna(row['dia_bp']) and row['dia_bp'] > 100):
-                score += 2
-            
-            # Determine severity
-            if score >= 5:
-                return 'High', score
-            elif score >= 2:
-                return 'Medium', score
-            else:
-                return 'Normal', score
-        
-        self.patient_master[['severity', 'risk_score']] = self.patient_master.apply(
-            lambda row: pd.Series(calculate_score(row)), axis=1
-        )
-        
-        logger.info("[OK] Risk severity scores calculated")
-        self.patient_master.to_csv(f'{SILVER_PATH}patient_master.csv', index=False)
-    
-    # ============ ADVANCED FEATURE 2: Real-Time Simulation ============
-    def simulate_realtime_processing(self):
-        """Simulate streaming vitals processing"""
-        logger.info("Feature 2: Simulating real-time vitals processing...")
-        
-        realtime_anomalies = []
-        
-        for idx, row in self.vitals_df.iterrows():
-            time.sleep(0.5)  # Simulate processing delay
-            
-            anomalies = []
-            if row['heart_rate'] > 120:
-                anomalies.append('High HR')
-            if row['oxygen'] < 92:
-                anomalies.append('Low Oxygen')
-            if row['sys_bp'] > 160 or row['dia_bp'] > 100:
-                anomalies.append('High BP')
-            
-            if anomalies:
-                logger.info(f"[STREAM] {row['patient_id']} @ {row['timestamp']}: {', '.join(anomalies)}")
-                realtime_anomalies.append({
-                    'patient_id': row['patient_id'],
-                    'timestamp': row['timestamp'],
-                    'anomalies': ', '.join(anomalies)
-                })
-        
-        logger.info(f"[OK] Real-time simulation complete: {len(realtime_anomalies)} anomalies detected")
-    
-    # ============ ADVANCED FEATURE 3: Comprehensive Logging ============
-    # Logging is integrated throughout the pipeline (see logger calls)
-    
-    # ============ STEP 8: Create Visualizations ============
-    def create_visualizations(self):
-        """Generate and save charts"""
-        logger.info("STEP 8: Creating visualizations...")
-        
-        plt.style.use('seaborn-v0_8-darkgrid')
-        
-        # 1. Oxygen distribution histogram
-        plt.figure(figsize=(10, 6))
-        plt.hist(self.vitals_df['oxygen'], bins=15, color='skyblue', edgecolor='black', alpha=0.7)
-        plt.xlabel('Oxygen Level (%)')
-        plt.ylabel('Frequency')
-        plt.title('Oxygen Level Distribution')
-        plt.axvline(x=92, color='red', linestyle='--', linewidth=2, label='Low Oxygen Threshold (92)')
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(f'{VIZ_PATH}oxygen_distribution.png', dpi=300)
-        plt.close()
-        logger.info("[OK] Oxygen distribution chart created")
-        
-        # 2. Anomaly count bar chart
-        if len(self.anomalies) > 0:
-            anomaly_counts = self.anomalies['patient_id'].value_counts()
-            plt.figure(figsize=(10, 6))
-            anomaly_counts.plot(kind='bar', color='coral', edgecolor='black', alpha=0.7)
-            plt.xlabel('Patient ID')
-            plt.ylabel('Anomaly Count')
-            plt.title('Anomaly Count by Patient')
-            plt.xticks(rotation=0)
-            plt.tight_layout()
-            plt.savefig(f'{VIZ_PATH}anomaly_count.png', dpi=300)
-            plt.close()
-            logger.info("[OK] Anomaly count chart created")
-        
-        # 3. Heart rate trend per patient
-        plt.figure(figsize=(12, 6))
-        for patient_id in self.vitals_df['patient_id'].unique():
-            patient_data = self.vitals_df[self.vitals_df['patient_id'] == patient_id]
-            plt.plot(patient_data['timestamp'], patient_data['heart_rate'], marker='o', label=patient_id)
-        plt.xlabel('Timestamp')
-        plt.ylabel('Heart Rate (bpm)')
-        plt.title('Heart Rate Trend by Patient')
-        plt.axhline(y=120, color='red', linestyle='--', linewidth=2, label='High HR Threshold (120)')
-        plt.legend()
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f'{VIZ_PATH}heart_rate_trend.png', dpi=300)
-        plt.close()
-        logger.info("[OK] Heart rate trend chart created")
-    
-    # ============ STEP 9: Generate Severity Distribution Chart ============
-    def create_severity_chart(self):
-        """Create visualization for risk severity distribution"""
-        logger.info("Creating severity distribution chart...")
-        
-        if 'severity' in self.patient_master.columns:
-            severity_counts = self.patient_master['severity'].value_counts()
-            plt.figure(figsize=(8, 6))
-            colors = {'High': 'red', 'Medium': 'orange', 'Normal': 'green'}
-            severity_counts.plot(kind='bar', color=[colors.get(x, 'gray') for x in severity_counts.index],
-                                edgecolor='black', alpha=0.7)
-            plt.xlabel('Severity Level')
-            plt.ylabel('Patient Count')
-            plt.title('Patient Risk Severity Distribution')
-            plt.xticks(rotation=0)
-            plt.tight_layout()
-            plt.savefig(f'{VIZ_PATH}severity_distribution.png', dpi=300)
-            plt.close()
-            logger.info("[OK] Severity distribution chart created")
-    
-    def run_pipeline(self):
-        """Execute complete pipeline"""
-        logger.info("=" * 70)
-        logger.info("HOSPITAL DATA PIPELINE EXECUTION STARTED")
-        logger.info("=" * 70)
-        
-        try:
-            # Step 1 & 2: Read and Bronze
-            self.read_and_store_bronze()
-            
-            # Step 3 & 4: Clean and Silver
-            self.clean_data()
-            
-            # Step 5 & 6: Create Master
-            self.create_patient_master()
-            
-            # Step 7: Anomalies
-            self.detect_anomalies()
-            
-            # Feature 1: Risk Scoring
-            self.calculate_risk_severity()
-            
-            # Feature 2: Real-time Simulation
-            self.simulate_realtime_processing()
-            
-            # Step 8: Visualizations
-            self.create_visualizations()
-            self.create_severity_chart()
-            
-            logger.info("=" * 70)
-            logger.info("PIPELINE EXECUTION COMPLETED SUCCESSFULLY")
-            logger.info("=" * 70)
-            logger.info(f"Bronze Layer: {len(os.listdir(BRONZE_PATH))} files")
-            logger.info(f"Silver Layer: {len(os.listdir(SILVER_PATH))} files")
-            logger.info(f"Gold Layer: {len(os.listdir(GOLD_PATH))} files")
-            logger.info(f"Visualizations: {len(os.listdir(VIZ_PATH))} files")
-            
-        except Exception as e:
-            logger.error(f"Pipeline execution failed: {e}", exc_info=True)
+    labs_df = pd.DataFrame(labs_data)
+    labs_df.to_csv('bronze/labs.csv', index=False)
+    print(f"✓ Stored {len(labs_df)} records to bronze/labs.csv")
+except Exception as e:
+    print(f"⚠ Warning: Could not read labs.docx: {e}")
+    print("  Trying labs.json as fallback...")
+    with open('labs.json', 'r') as f:
+        labs_list = json.load(f)
+    labs_df = pd.DataFrame(labs_list)
+    labs_df.to_csv('bronze/labs.csv', index=False)
+    print(f"✓ Stored {len(labs_df)} records to bronze/labs.csv")
+
+print("✓ Bronze Layer Complete - All raw data stored")
 
 
-if __name__ == '__main__':
-    pipeline = HospitalPipeline()
-    pipeline.run_pipeline()
+# ============================================================================
+# TASK 2: SILVER LAYER - Data Cleaning & Standardization
+# ============================================================================
+print("\n🧹 TASK 2: Silver Layer - Data Cleaning & Standardization")
+print("-" * 80)
+
+# Clean EHR data
+print("Cleaning ehr.csv...")
+ehr_clean = ehr_df.copy()
+ehr_clean['admission_time'] = pd.to_datetime(ehr_clean['admission_time'])
+ehr_clean = ehr_clean.rename(columns={'admission_time': 'timestamp'})
+ehr_clean['patient_id'] = ehr_clean['patient_id'].astype(int)
+ehr_clean.to_csv('silver/ehr_clean.csv', index=False)
+print(f"✓ Cleaned EHR data: {len(ehr_clean)} patients")
+print(f"  - Converted timestamps to datetime")
+print(f"  - Standardized column names")
+
+# Clean vitals data
+print("\nCleaning vitals.jsonl...")
+vitals_clean = vitals_df.copy()
+# Convert UNIX timestamps to datetime
+vitals_clean['timestamp'] = pd.to_datetime(vitals_clean['timestamp'], unit='s')
+# Rename patientId to patient_id for consistency
+vitals_clean = vitals_clean.rename(columns={'patientId': 'patient_id'})
+# Ensure numeric fields are numeric
+vitals_clean['hr'] = pd.to_numeric(vitals_clean['hr'], errors='coerce')
+vitals_clean['ox'] = pd.to_numeric(vitals_clean['ox'], errors='coerce')
+vitals_clean['sys'] = pd.to_numeric(vitals_clean['sys'], errors='coerce')
+vitals_clean['dia'] = pd.to_numeric(vitals_clean['dia'], errors='coerce')
+vitals_clean['patient_id'] = vitals_clean['patient_id'].astype(int)
+# Drop any rows with missing values
+vitals_clean = vitals_clean.dropna()
+vitals_clean.to_csv('silver/clean_vitals.csv', index=False)
+print(f"✓ Cleaned vitals data: {len(vitals_clean)} vital readings")
+print(f"  - Converted UNIX timestamps to datetime")
+print(f"  - Ensured all vital signs are numeric (hr, ox, sys, dia)")
+print(f"  - Standardized patient_id column")
+
+# Clean labs data
+print("\nCleaning labs.json...")
+labs_clean = labs_df.copy()
+# Convert timestamps to datetime
+labs_clean['timestamp'] = pd.to_datetime(labs_clean['timestamp'])
+# Ensure numeric fields are numeric
+labs_clean['value'] = pd.to_numeric(labs_clean['value'], errors='coerce')
+labs_clean['patient_id'] = labs_clean['patient_id'].astype(int)
+# Rename for standardization
+labs_clean = labs_clean.rename(columns={'test': 'lab_test', 'value': 'lab_value'})
+# Drop any rows with missing values
+labs_clean = labs_clean.dropna()
+labs_clean.to_csv('silver/clean_labs.csv', index=False)
+print(f"✓ Cleaned labs data: {len(labs_clean)} lab records")
+print(f"  - Converted timestamps to datetime")
+print(f"  - Ensured lab values are numeric")
+print(f"  - Standardized column names (lab_test, lab_value)")
+
+print("✓ Silver Layer Complete - All data cleaned and standardized")
+
+
+# ============================================================================
+# TASK 3: Combined Patient Master Table
+# ============================================================================
+print("\n🔗 TASK 3: Creating Combined Patient Master Table")
+print("-" * 80)
+
+# Get latest vitals for each patient
+print("Getting latest vitals for each patient...")
+vitals_latest = vitals_clean.sort_values('timestamp').groupby('patient_id').last().reset_index()
+vitals_latest = vitals_latest[['patient_id', 'hr', 'ox', 'sys', 'dia']]
+vitals_latest.columns = ['patient_id', 'latest_hr', 'latest_ox', 'latest_sys', 'latest_dia']
+print(f"✓ Got latest vitals for {len(vitals_latest)} patients")
+
+# Get latest labs for each patient (pivot to get one row per patient)
+print("Getting latest labs for each patient...")
+labs_latest = labs_clean.sort_values('timestamp').groupby(['patient_id', 'lab_test']).last().reset_index()
+labs_pivot = labs_latest.pivot(index='patient_id', columns='lab_test', values='lab_value').reset_index()
+# Rename columns to be more descriptive
+labs_pivot.columns = ['patient_id'] + [f'latest_{col}' for col in labs_pivot.columns[1:]]
+print(f"✓ Got latest labs for {len(labs_pivot)} patients")
+
+# Join EHR + latest vitals + latest labs
+print("\nJoining EHR + Vitals + Labs...")
+patient_master = ehr_clean.copy()
+patient_master = patient_master.merge(vitals_latest, on='patient_id', how='left')
+patient_master = patient_master.merge(labs_pivot, on='patient_id', how='left')
+
+# Save patient master
+patient_master.to_csv('silver/patient_master.csv', index=False)
+print(f"✓ Created patient_master.csv with {len(patient_master)} patients")
+print(f"  - Columns: {len(patient_master.columns)}")
+print(f"  - Includes: EHR data + Latest vitals + Latest labs")
+
+print("✓ Patient Master Table Complete")
+
+
+# ============================================================================
+# TASK 4: Anomaly Detection (Rule-Based)
+# ============================================================================
+print("\n🚨 TASK 4: Anomaly Detection (Rule-Based)")
+print("-" * 80)
+
+anomalies = []
+
+# Detect anomalies in vitals data
+print("Detecting anomalies in vitals data...")
+for _, row in vitals_clean.iterrows():
+    patient_id = row['patient_id']
+    timestamp = row['timestamp']
+    
+    # Rule 1: High Heart Rate (HR > 120)
+    if row['hr'] > 120:
+        anomalies.append({
+            'patient_id': patient_id,
+            'timestamp': timestamp,
+            'anomaly': 'High Heart Rate',
+            'value': row['hr']
+        })
+    
+    # Rule 2: Low Oxygen (OX < 92)
+    if row['ox'] < 92:
+        anomalies.append({
+            'patient_id': patient_id,
+            'timestamp': timestamp,
+            'anomaly': 'Low Oxygen',
+            'value': row['ox']
+        })
+    
+    # Rule 3: High Blood Pressure (sys > 160 OR dia > 100)
+    if row['sys'] > 160 or row['dia'] > 100:
+        anomalies.append({
+            'patient_id': patient_id,
+            'timestamp': timestamp,
+            'anomaly': 'High Blood Pressure',
+            'value': f"sys={row['sys']}, dia={row['dia']}"
+        })
+
+# Create anomalies dataframe
+anomalies_df = pd.DataFrame(anomalies)
+anomalies_df.to_csv('gold/anomalies.csv', index=False)
+
+print(f"✓ Detected {len(anomalies_df)} anomalies:")
+if len(anomalies_df) > 0:
+    anomaly_counts = anomalies_df['anomaly'].value_counts()
+    for anomaly_type, count in anomaly_counts.items():
+        print(f"  - {anomaly_type}: {count}")
+
+print("✓ Anomaly Detection Complete")
+
+
+# ============================================================================
+# TASK 5: Visualizations
+# ============================================================================
+print("\n📊 TASK 5: Creating Visualizations")
+print("-" * 80)
+
+# Visualization 1: Heart Rate Trend (Combined Multi-line Plot)
+print("Creating Heart Rate Trend visualization...")
+plt.figure(figsize=(12, 6))
+
+# Get sample of 5 patients for clarity
+sample_patients = vitals_clean['patient_id'].unique()[:5]
+for patient_id in sample_patients:
+    patient_vitals = vitals_clean[vitals_clean['patient_id'] == patient_id]
+    plt.plot(patient_vitals['timestamp'], patient_vitals['hr'], 
+             marker='o', label=f'Patient {patient_id}', alpha=0.7)
+
+plt.axhline(y=120, color='r', linestyle='--', label='High HR Threshold (120)', alpha=0.5)
+plt.xlabel('Timestamp', fontsize=12)
+plt.ylabel('Heart Rate (bpm)', fontsize=12)
+plt.title('Heart Rate Trend Over Time (Sample Patients)', fontsize=14, fontweight='bold')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('visualizations/hr_trend.png', dpi=300, bbox_inches='tight')
+plt.close()
+print("✓ Saved: visualizations/hr_trend.png")
+
+# Visualization 2: Oxygen Level Distribution
+print("Creating Oxygen Level Distribution visualization...")
+plt.figure(figsize=(10, 6))
+
+# Create histogram with low oxygen highlighted
+ox_values = vitals_clean['ox'].values
+plt.hist(ox_values, bins=30, alpha=0.7, color='skyblue', edgecolor='black')
+
+# Add vertical line for low oxygen threshold
+plt.axvline(x=92, color='red', linestyle='--', linewidth=2, 
+            label='Low Oxygen Threshold (92)')
+
+# Highlight low oxygen readings
+low_ox = vitals_clean[vitals_clean['ox'] < 92]['ox']
+if len(low_ox) > 0:
+    plt.hist(low_ox, bins=30, alpha=0.8, color='red', edgecolor='darkred', 
+             label=f'Low Oxygen Readings ({len(low_ox)})')
+
+plt.xlabel('Oxygen Level (%)', fontsize=12)
+plt.ylabel('Number of Occurrences', fontsize=12)
+plt.title('Oxygen Level Distribution', fontsize=14, fontweight='bold')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('visualizations/oxygen_distribution.png', dpi=300, bbox_inches='tight')
+plt.close()
+print("✓ Saved: visualizations/oxygen_distribution.png")
+
+# Visualization 3: Bar Chart of Anomaly Counts
+print("Creating Anomaly Counts Bar Chart...")
+plt.figure(figsize=(10, 6))
+
+if len(anomalies_df) > 0:
+    anomaly_counts = anomalies_df['anomaly'].value_counts()
+    bars = plt.bar(range(len(anomaly_counts)), anomaly_counts.values, 
+                   color=['#FF6B6B', '#4ECDC4', '#FFE66D'], 
+                   edgecolor='black', linewidth=1.5)
+    
+    plt.xticks(range(len(anomaly_counts)), anomaly_counts.index, rotation=0)
+    plt.xlabel('Anomaly Type', fontsize=12)
+    plt.ylabel('Number of Occurrences', fontsize=12)
+    plt.title('Anomaly Detection Summary', fontsize=14, fontweight='bold')
+    
+    # Add value labels on bars
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height)}',
+                ha='center', va='bottom', fontsize=11, fontweight='bold')
+else:
+    plt.text(0.5, 0.5, 'No anomalies detected', 
+             ha='center', va='center', fontsize=14)
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.tight_layout()
+plt.savefig('visualizations/anomaly_counts.png', dpi=300, bbox_inches='tight')
+plt.close()
+print("✓ Saved: visualizations/anomaly_counts.png")
+
+print("✓ All Visualizations Created")
+
+
+# ============================================================================
+# FINAL SUMMARY
+# ============================================================================
+print("\n" + "=" * 80)
+print("✅ PIPELINE EXECUTION COMPLETE!")
+print("=" * 80)
+print("\n📊 Summary:")
+print(f"  • Bronze Layer: {len(ehr_df)} EHR records, {len(vitals_df)} vitals, {len(labs_df)} labs")
+print(f"  • Silver Layer: {len(ehr_clean)} patients cleaned")
+print(f"  • Patient Master: {len(patient_master)} patients with complete data")
+print(f"  • Anomalies Detected: {len(anomalies_df)}")
+print(f"  • Visualizations: 3 charts created")
+
+print("\n📁 Output Files:")
+print("  Bronze Layer:")
+print("    - bronze/ehr.csv")
+print("    - bronze/vitals.csv")
+print("    - bronze/labs.csv")
+print("\n  Silver Layer:")
+print("    - silver/ehr_clean.csv")
+print("    - silver/clean_vitals.csv")
+print("    - silver/clean_labs.csv")
+print("    - silver/patient_master.csv")
+print("\n  Gold Layer:")
+print("    - gold/anomalies.csv")
+print("\n  Visualizations:")
+print("    - visualizations/hr_trend.png")
+print("    - visualizations/oxygen_distribution.png")
+print("    - visualizations/anomaly_counts.png")
+
+print("\n" + "=" * 80)
+print("🎉 All tasks completed successfully!")
+print("=" * 80)

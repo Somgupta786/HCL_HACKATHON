@@ -14,13 +14,30 @@ st.title('🏥 Hospital Data Pipeline Dashboard')
 st.markdown('---')
 
 # Load data paths
-SILVER_PATH = 'hospital_pipeline/silver/'
-GOLD_PATH = 'hospital_pipeline/gold/'
-VIZ_PATH = 'hospital_pipeline/visualizations/'
+SILVER_PATH = 'silver/'
+GOLD_PATH = 'gold/'
+VIZ_PATH = 'visualizations/'
 
 # Sidebar navigation
 st.sidebar.title('Navigation')
 page = st.sidebar.radio('Select View', ['Patient Master', 'Detected Anomalies', 'Visualizations', 'Risk Severity'])
+
+st.sidebar.markdown('---')
+
+# Add refresh button to clear cache and reload data
+if st.sidebar.button('🔄 Refresh Data'):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.markdown('### 📝 Instructions')
+st.sidebar.info(
+    """
+    1. **Edit Data**: Modify the CSV files (e.g., `ehr.csv`)
+    2. **Run Pipeline**: Execute `python main.py` to process changes
+    3. **View Dashboard**: The dashboard will auto-load updated data
+    4. **Refresh**: Click "Refresh Data" if needed
+    """
+)
 
 # ============ 1. Patient Master Table ============
 if page == 'Patient Master':
