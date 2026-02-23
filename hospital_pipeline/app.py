@@ -13,6 +13,12 @@ from pathlib import Path
 # Page configuration
 st.set_page_config(page_title='Hospital Data Pipeline', layout='wide')
 
+# Get the app directory (where app.py is located)
+APP_DIR = Path(__file__).parent
+SILVER_PATH = APP_DIR / 'silver'
+GOLD_PATH = APP_DIR / 'gold'
+VIZ_PATH = APP_DIR / 'visualizations'
+
 # Function to run the pipeline
 @st.cache_data
 def run_pipeline():
@@ -23,44 +29,29 @@ def run_pipeline():
         env['PYTHONIOENCODING'] = 'utf-8'
         
         result = subprocess.run(
-            [sys.executable, 'main.py'],
+            [sys.executable, str(APP_DIR / 'main.py')],
             capture_output=True,
             text=True,
             encoding='utf-8',
             errors='replace',
-            cwd=os.path.dirname(__file__) or '.',
+            cwd=str(APP_DIR),
             env=env
         )
         return result.returncode == 0, result.stdout, result.stderr
     except Exception as e:
         return False, "", str(e)
 
-# Check if output data exists, if not run pipeline automatically
+# Check if output data exists
 def check_data_exists():
     """Check if the pipeline has been run and data exists"""
     required_files = [
-        'silver/patient_master.csv',
-        'gold/anomalies.csv',
-        'visualizations/hr_trend.png'
+        SILVER_PATH / 'patient_master.csv',
+        GOLD_PATH / 'anomalies.csv'
     ]
-    return all(os.path.exists(f) for f in required_files)
-
-# Auto-run pipeline on first load if data doesn't exist
-if not check_data_exists():
-    with st.spinner('🔄 Running pipeline for the first time... This may take a moment.'):
-        success, stdout, stderr = run_pipeline()
-        if not success:
-            st.error(f'Pipeline failed: {stderr}')
-        else:
-            st.success('✅ Pipeline completed successfully!')
+    return all(f.exists() for f in required_files)
 
 st.title('🏥 Hospital Data Pipeline Dashboard')
 st.markdown('---')
-
-# Load data paths
-SILVER_PATH = 'silver/'
-GOLD_PATH = 'gold/'
-VIZ_PATH = 'visualizations/'
 
 # Sidebar navigation
 st.sidebar.title('Navigation')
@@ -103,8 +94,8 @@ st.sidebar.info(
 if page == 'Patient Master':
     st.header('📋 Patient Master Table')
     
-    patient_master_path = f'{SILVER_PATH}patient_master.csv'
-    if os.path.exists(patient_master_path):
+    patient_master_path = SILVER_PATH / 'patient_master.csv'
+    if patient_master_path.exists():
         df = pd.read_csv(patient_master_path)
         
         st.markdown(f'**Total Patients:** {len(df)}')
@@ -125,8 +116,8 @@ if page == 'Patient Master':
 elif page == 'Detected Anomalies':
     st.header('⚠️ Detected Anomalies')
     
-    anomalies_path = f'{GOLD_PATH}anomalies.csv'
-    if os.path.exists(anomalies_path):
+    anomalies_path = GOLD_PATH / 'anomalies.csv'
+    if anomalies_path.exists():
         df = pd.read_csv(anomalies_path)
         
         st.markdown(f'**Total Anomalies Detected:** {len(df)}')
@@ -164,7 +155,7 @@ elif page == 'Detected Anomalies':
 elif page == 'Visualizations':
     st.header('📊 Data Visualizations')
     
-    viz_files = [f for f in os.listdir(VIZ_PATH) if f.endswith('.png')] if os.path.exists(VIZ_PATH) else []
+    viz_files = [f.name for f in VIZ_PATH.glob('*.png')] if VIZ_PATH.exists() else []
     
     if viz_files:
         # Create tabs for each visualization
@@ -172,7 +163,7 @@ elif page == 'Visualizations':
         
         for tab, viz_file in zip(tabs, viz_files):
             with tab:
-                st.image(f'{VIZ_PATH}{viz_file}', use_column_width=True)
+                st.image(str(VIZ_PATH / viz_file), use_column_width=True)
     else:
         st.warning('Visualizations not found. Please run the pipeline first.')
 
@@ -180,8 +171,8 @@ elif page == 'Visualizations':
 elif page == 'Risk Severity':
     st.header('⚕️ Risk Severity Analysis')
     
-    patient_master_path = f'{SILVER_PATH}patient_master.csv'
-    if os.path.exists(patient_master_path):
+    patient_master_path = SILVER_PATH / 'patient_master.csv'
+    if patient_master_path.exists():
         df = pd.read_csv(patient_master_path)
         
         if 'severity' in df.columns:
